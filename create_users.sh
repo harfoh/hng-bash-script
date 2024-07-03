@@ -84,3 +84,4 @@ sudo chmod 600 /var/secure/user_passwords.txt
 echo "$(date) - Set permissions for /var/secure/user_passwords.txt" >> /var/log/user_management.log
 
 echo "Script execution completed. Check /var/log/user_management.log for details."
+
