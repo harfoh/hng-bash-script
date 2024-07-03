@@ -14,7 +14,28 @@ if [ ! -d /var/secure ]; then
     echo "$(date) - Created /var/secure directory" >> /var/log/user_management.log
 fi
 
-# Read the text file line by line
+# Create groups mentioned in the text file
+while IFS=';' read -r username groups; do
+    # Skip if username is empty
+    if [ -z "$username" ]; then
+        echo "$(date) - Skipping empty username" >> /var/log/user_management.log
+        continue
+    fi
+
+    # Read and create groups
+    IFS=',' read -ra grp_array <<< "$groups"
+    for grp in "${grp_array[@]}"; do
+        if ! grep -q "^$grp:" /etc/group; then
+            sudo groupadd "$grp"
+            echo "$(date) - Created group $grp" >> /var/log/user_management.log
+            echo "$(date) - Created group $grp" >> /var/log/created_groups.log
+        else
+            echo "$(date) - Group $grp already exists. Skipping group creation." >> /var/log/user_management.log
+        fi
+    done
+done < "$1"
+
+# Read the text file line by line to create users and assign them to groups
 while IFS=';' read -r username groups; do
     # Skip if username is empty
     if [ -z "$username" ]; then
@@ -29,16 +50,15 @@ while IFS=';' read -r username groups; do
         continue
     fi
 
-    # Check if the group already exists
+    # Create a primary group for the user if it doesn't exist
     if ! grep -q "^$username:" /etc/group; then
         sudo groupadd "$username"
         echo "$(date) - Created group $username" >> /var/log/user_management.log
-        echo "$(date) - Created group $username" >> /var/log/created_groups.log
     else
         echo "$(date) - Group $username already exists. Skipping group creation." >> /var/log/user_management.log
     fi
 
-    # Create the user and assign to groups that exist
+    # Create the user and assign to groups
     user_groups=""
     IFS=',' read -ra grp_array <<< "$groups"
     for grp in "${grp_array[@]}"; do
